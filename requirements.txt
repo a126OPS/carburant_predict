@@ -1,11 +1,5 @@
-gradio
-ipykernel
-joblib
-jupyterlab
-matplotlib
-notebook
-numpy
-pandas
-requests
-scikit-learn
-seaborn
+gradio==6.9.0
+joblib==1.5.3
+numpy==2.4.3
+pandas==3.0.1
+scikit-learn==1.8.0

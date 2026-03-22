@@ -300,4 +300,5 @@ with gr.Blocks(
     """)
 
 
-demo.launch(share=True, debug=True)
+if __name__ == "__main__":
+    demo.launch()
