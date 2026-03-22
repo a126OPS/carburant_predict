@@ -1,5 +1,7 @@
-# Fichiers modèle et cache (volumineux - téléchargés au runtime)
+# Fichiers modele et cache
 *.joblib
+!modele_carburant.joblib
+!runtime_cache_2026.joblib
 
 # Cache Python
 __pycache__/
