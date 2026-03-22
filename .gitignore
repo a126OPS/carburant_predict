@@ -1,0 +1,23 @@
+# Fichiers modèle et cache (volumineux - téléchargés au runtime)
+*.joblib
+
+# Cache Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Environnement virtuel
+venv/
+carburant/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+.env
