@@ -35,9 +35,14 @@ print(type(pipeline).__name__)
 L'application Gradio déployée sur le Space Hugging Face expose aussi une **API JSON** pour l'intégrer facilement dans un portfolio ou un site vitrine.
 
 - **Space :** `https://huggingface.co/spaces/a126OPS/carburant_predict`
-- **Endpoint runtime :** `POST https://<ton-space>.hf.space/api/predict`
+- **Interface embarquable :** `https://a126ops-carburant-predict.hf.space/`
+- **Base runtime :** `https://a126ops-carburant-predict.hf.space`
+- **Appel API :** `POST /gradio_api/call/predict`
+- **Lecture du résultat :** `GET /gradio_api/call/predict/{event_id}`
 - **Entrées :** `departement`, `carburant`, `horizon`
 - **Formats acceptés pour le département :** `"75"` ou `"75 — Paris"`
+
+> Note : avec `gradio==6.9.0`, l'ancien endpoint `POST /api/predict` n'est plus le bon pour ce Space. Utilise le runtime `.hf.space` et le flux `gradio_api`.
 
 Exemple de requête :
 
@@ -50,7 +55,9 @@ Exemple de requête :
 Exemple JavaScript :
 
 ```js
-const response = await fetch("https://<ton-space>.hf.space/api/predict", {
+const HF_BASE = "https://a126ops-carburant-predict.hf.space";
+
+const startResponse = await fetch(`${HF_BASE}/gradio_api/call/predict`, {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -60,8 +67,22 @@ const response = await fetch("https://<ton-space>.hf.space/api/predict", {
   }),
 });
 
-const payload = await response.json();
-const result = payload.data[0];
+const { event_id } = await startResponse.json();
+
+const resultResponse = await fetch(
+  `${HF_BASE}/gradio_api/call/predict/${event_id}`
+);
+
+const sseText = await resultResponse.text();
+const dataLine = sseText
+  .split("\n")
+  .find((line) => line.startsWith("data: "));
+
+if (!dataLine) {
+  throw new Error("Réponse SSE invalide");
+}
+
+const [result] = JSON.parse(dataLine.slice(6));
 
 if (!result.ok) {
   console.error(result.error);
