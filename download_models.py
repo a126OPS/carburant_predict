@@ -1,10 +1,17 @@
-"""Telecharge les fichiers modele depuis GitHub Releases."""
+"""Telecharge les fichiers modele depuis le repo Hugging Face du modele."""
 
 import urllib.request
 from pathlib import Path
 
-MODEL_URL = "https://github.com/a126OPS/projet_public/releases/download/v1.0/modele_carburant.joblib"
-CACHE_URL = "https://github.com/a126OPS/projet_public/releases/download/v1.0/runtime_cache_2026.joblib"
+MODEL_REPO_URL = "https://huggingface.co/a126OPS/carburant_price_predict"
+MODEL_URL = (
+    "https://huggingface.co/a126OPS/carburant_price_predict/"
+    "resolve/main/modele_carburant.joblib?download=true"
+)
+CACHE_URL = (
+    "https://huggingface.co/a126OPS/carburant_price_predict/"
+    "resolve/main/runtime_cache_2026.joblib?download=true"
+)
 
 
 def download_if_missing():
@@ -27,7 +34,7 @@ def download_if_missing():
             print(f"[OK] {filename} downloaded")
         except Exception as exc:
             print(f"[ERROR] {exc}")
-            print("Assurez-vous que la release GitHub v1.0 existe.")
+            print(f"Assurez-vous que les fichiers existent dans {MODEL_REPO_URL}.")
 
 
 if __name__ == "__main__":

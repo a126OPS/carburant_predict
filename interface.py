@@ -167,53 +167,177 @@ NOMS_DEPTS = {
 # Récupérer les départements disponibles
 DEPTS_DISPO = sorted(df_dept_jour['departement'].unique())
 CHOIX_DEPTS = [f"{d} — {NOMS_DEPTS.get(d, d)}" for d in DEPTS_DISPO]
+CARBURANTS_DISPO = ['Diesel', 'SP95', 'SP98', 'E85', 'GPL']
+LABELS_DEPTS = {d: f"{d} — {NOMS_DEPTS.get(d, d)}" for d in DEPTS_DISPO}
+DEPTS_PAR_NOM = {NOMS_DEPTS.get(d, d).casefold(): d for d in DEPTS_DISPO}
+CARBURANTS_PAR_NOM = {carb.casefold(): carb for carb in CARBURANTS_DISPO}
+
+
+def normaliser_departement(dept):
+    """Accepte un code departement, un label UI ou un nom de departement."""
+    if dept is None:
+        return None
+
+    if isinstance(dept, (int, np.integer)):
+        dept = f"{int(dept):02d}"
+    else:
+        dept = str(dept).strip()
+        if '—' in dept:
+            dept = dept.split('—', 1)[0].strip()
+        if dept.isdigit():
+            dept = dept.zfill(2)
+        else:
+            dept = DEPTS_PAR_NOM.get(dept.casefold())
+
+    if dept in DEPTS_DISPO:
+        return dept
+    return None
+
+
+def normaliser_carburant(carburant):
+    """Accepte un carburant en casse libre."""
+    if carburant is None:
+        return None
+    return CARBURANTS_PAR_NOM.get(str(carburant).strip().casefold())
+
+
+def construire_reponse_prediction(dept, carburant, horizon):
+    """Construit une reponse JSON stable reutilisable par Gradio et un portfolio."""
+    dept_normalise = normaliser_departement(dept)
+    if dept_normalise is None:
+        return {
+            'ok': False,
+            'code': 'departement_invalide',
+            'error': 'Departement invalide. Utilise un code a 2 chiffres comme "75" ou un libelle comme "75 — Paris".',
+        }
+
+    carburant_normalise = normaliser_carburant(carburant)
+    if carburant_normalise is None:
+        return {
+            'ok': False,
+            'code': 'carburant_invalide',
+            'error': f'Carburant invalide. Valeurs acceptees : {", ".join(CARBURANTS_DISPO)}.',
+        }
+
+    try:
+        horizon_val = int(horizon)
+    except (TypeError, ValueError):
+        return {
+            'ok': False,
+            'code': 'horizon_invalide',
+            'error': 'Horizon invalide. Utilise un nombre entier entre 1 et 14.',
+        }
+
+    if not 1 <= horizon_val <= 14:
+        return {
+            'ok': False,
+            'code': 'horizon_hors_limite',
+            'error': 'Horizon invalide. Utilise un nombre entier entre 1 et 14.',
+        }
+
+    res = predire_depuis_aujourd_hui(dept_normalise, carburant_normalise, horizon_val)
+    if res[0] is None:
+        return {
+            'ok': False,
+            'code': 'donnees_indisponibles',
+            'error': (
+                'Donnees insuffisantes ou trop anciennes pour cette combinaison. '
+                'SP95 peut etre rare dans certains departements : essaie SP98 si besoin.'
+            ),
+            'input': {
+                'departement': dept_normalise,
+                'departement_nom': NOMS_DEPTS.get(dept_normalise, dept_normalise),
+                'departement_label': LABELS_DEPTS.get(dept_normalise, dept_normalise),
+                'carburant': carburant_normalise,
+                'horizon_jours': horizon_val,
+            },
+        }
+
+    prix_actuel, prix_predit, mae_val, date_pred = res
+    variation = prix_predit - prix_actuel
+    variation_pct = (variation / prix_actuel) * 100 if prix_actuel else 0.0
+    nom_dept = NOMS_DEPTS.get(dept_normalise, dept_normalise)
+
+    if variation > 0.005:
+        direction = 'hausse'
+        tendance = f'Hausse prevue : {variation:+.3f} EUR/L ({variation_pct:+.2f}%)'
+        conseil = 'Faire le plein maintenant avant la hausse'
+    elif variation < -0.005:
+        direction = 'baisse'
+        tendance = f'Baisse prevue : {variation:+.3f} EUR/L ({variation_pct:+.2f}%)'
+        conseil = 'Attendre : le prix devrait baisser'
+    else:
+        direction = 'stable'
+        tendance = f'Prix stable ({variation:+.3f} EUR/L)'
+        conseil = 'Pas d urgence particuliere : prix stable'
+
+    return {
+        'ok': True,
+        'input': {
+            'departement': dept_normalise,
+            'departement_nom': nom_dept,
+            'departement_label': LABELS_DEPTS.get(dept_normalise, dept_normalise),
+            'carburant': carburant_normalise,
+            'horizon_jours': horizon_val,
+        },
+        'prediction': {
+            'date_reference': aujourd_hui.strftime('%Y-%m-%d'),
+            'date_prediction': date_pred.strftime('%Y-%m-%d'),
+            'prix_actuel_eur_l': round(prix_actuel, 3),
+            'prix_predit_eur_l': round(prix_predit, 3),
+            'variation_eur_l': round(variation, 3),
+            'variation_pct': round(variation_pct, 2),
+            'borne_basse_eur_l': round(prix_predit - mae_val, 3),
+            'borne_haute_eur_l': round(prix_predit + mae_val, 3),
+            'incertitude_eur_l': round(mae_val, 3),
+            'incertitude_centimes': round(mae_val * 100, 1),
+        },
+        'tendance': {
+            'direction': direction,
+            'resume': tendance,
+            'conseil': conseil,
+        },
+        'meta': {
+            'observations': int(n_observations),
+            'source': 'data.economie.gouv.fr',
+            'date_entrainement': aujourd_hui.strftime('%Y-%m-%d'),
+            'date_prochain_reentrainement': date_prochain.strftime('%Y-%m-%d'),
+        },
+    }
+
+
+def predire_api(dept, carburant, horizon):
+    """Endpoint API JSON pour un portfolio ou une integration front."""
+    return construire_reponse_prediction(dept, carburant, horizon)
 
 
 def predire_interface(dept_str, carburant, horizon):
-    dept    = dept_str.split(' — ')[0].strip()
-    horizon = int(horizon)
-    res     = predire_depuis_aujourd_hui(dept, carburant, horizon)
+    prediction = construire_reponse_prediction(dept_str, carburant, horizon)
 
-    if res[0] is None:
-        return (
-            f'[ERREUR] Donnees insuffisantes ou trop anciennes\n\n'
-            f'Ce carburant est peut-être rare dans ce département\n'
-            f'(SP95 en déclin) ou les données datent de > 60 jours.\n\n'
-            f'Essaie SP98 à la place du SP95.'
-        )
+    if not prediction['ok']:
+        return f"[ERREUR] {prediction['error']}"
 
-    prix_actuel, prix_predit, mae_val, date_pred = res
-    variation     = prix_predit - prix_actuel
-    variation_pct = (variation / prix_actuel) * 100
-    nom_dept      = NOMS_DEPTS.get(dept, dept)
-
-    if variation > 0.005:
-        tendance = f'[HAUSSE] Hausse prevue : {variation:+.3f}EUR/L ({variation_pct:+.2f}%)'
-        conseil  = '[ACTION] Faire le plein maintenant avant la hausse'
-    elif variation < -0.005:
-        tendance = f'[BAISSE] Baisse prevue : {variation:+.3f}EUR/L ({variation_pct:+.2f}%)'
-        conseil  = '[ATTENTE] Attendre — le prix devrait baisser'
-    else:
-        tendance = f'[STABLE] Prix stable ({variation:+.3f}EUR/L)'
-        conseil  = '[NORMAL] Pas d\'urgence — prix stable'
+    entree = prediction['input']
+    resultat = prediction['prediction']
+    tendance = prediction['tendance']
 
     return f"""
-## {carburant} — {nom_dept} ({dept})
+## {entree['carburant']} — {entree['departement_nom']} ({entree['departement']})
 
-| Aujourd'hui ({aujourd_hui.strftime('%d/%m/%Y')}) | Le {date_pred.strftime('%d/%m/%Y')} |
+| Aujourd'hui ({aujourd_hui.strftime('%d/%m/%Y')}) | Le {pd.Timestamp(resultat['date_prediction']).strftime('%d/%m/%Y')} |
 |:---:|:---:|
-| **{prix_actuel:.3f} EUR/L** | **{prix_predit:.3f} EUR/L** |
+| **{resultat['prix_actuel_eur_l']:.3f} EUR/L** | **{resultat['prix_predit_eur_l']:.3f} EUR/L** |
 
-### [TENDANCE] {tendance}
+### [TENDANCE] {tendance['resume']}
 
-### [CONSEIL] {conseil}
+### [CONSEIL] {tendance['conseil']}
 
 ### [CONFIANCE] Fourchette de confiance
 | A la baisse | **Prediction** | A la hausse |
 |:-----------:|:--------------:|:-----------:|
-| {prix_predit - mae_val:.3f} EUR/L | **{prix_predit:.3f} EUR/L** | {prix_predit + mae_val:.3f} EUR/L |
+| {resultat['borne_basse_eur_l']:.3f} EUR/L | **{resultat['prix_predit_eur_l']:.3f} EUR/L** | {resultat['borne_haute_eur_l']:.3f} EUR/L |
 
-*(±{mae_val*100:.1f} centimes d'incertitude)*
+*(±{resultat['incertitude_centimes']:.1f} centimes d'incertitude)*
 
 ---
 *Modele : {n_observations:,} observations (2022 → {aujourd_hui.strftime('%d/%m/%Y')})*
@@ -242,13 +366,20 @@ with gr.Blocks(
                 label='Département'
             )
             carb_input = gr.Dropdown(
-                choices=['Diesel','SP95','SP98','E85','GPL'],
+                choices=CARBURANTS_DISPO,
                 value='Diesel', label='Carburant'
             )
             horizon_input = gr.Slider(
                 minimum=1, maximum=14, value=7, step=1,
                 label='Prédire dans combien de jours ?'
             )
+
+    # Composants caches pour exposer une API JSON simple via Gradio.
+    api_dept_input = gr.Textbox(label='Code departement', visible=False)
+    api_carb_input = gr.Textbox(label='Carburant', visible=False)
+    api_horizon_input = gr.Number(label='Horizon', value=7, precision=0, visible=False)
+    api_output = gr.JSON(label='Prediction API', visible=False)
+    api_btn = gr.Button('API predict', visible=False)
 
     gr.Markdown('---')
     btn    = gr.Button('[PREDICT] Predire le prix futur', variant='primary', size='lg')
@@ -257,7 +388,17 @@ with gr.Blocks(
     btn.click(
         fn=predire_interface,
         inputs=[dept_input, carb_input, horizon_input],
-        outputs=output
+        outputs=output,
+        api_name=False,
+        show_api=False
+    )
+
+    api_btn.click(
+        fn=predire_api,
+        inputs=[api_dept_input, api_carb_input, api_horizon_input],
+        outputs=api_output,
+        api_name='predict',
+        queue=False
     )
 
     gr.Markdown('---\n### [EXAMPLES] Exemples')

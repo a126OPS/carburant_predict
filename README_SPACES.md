@@ -18,6 +18,9 @@ Prédictions IA du prix du carburant en France pour les **14 prochains jours**.
 
 L'application est **déployée et prête à l'emploi** sur cet espace.
 
+- **Repo modèle Hugging Face** : https://huggingface.co/a126OPS/carburant_price_predict
+- **Space Hugging Face** : https://huggingface.co/spaces/a126OPS/carburant_predict
+
 ## ⚙️ Fonctionnement
 
 - **Modèle** : Ridge Regression avec 31 features
@@ -58,7 +61,9 @@ L'application est **déployée et prête à l'emploi** sur cet espace.
 
 ## 🔧 Code source
 
-- **GitHub** : https://github.com/a126OPS/projet_public
+- **Repo modèle** : https://huggingface.co/a126OPS/carburant_price_predict
+- **Space** : https://huggingface.co/spaces/a126OPS/carburant_predict
+- **GitHub** : https://github.com/a126OPS/carburant_predict
 - **License** : MIT
 
 ## 📈 Métriques du modèle

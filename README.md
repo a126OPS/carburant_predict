@@ -18,24 +18,26 @@ metrics:
 
 ## Description
 
-Ce modèle prédit le **prix du carburant à la pompe** (SP95, SP98, Diesel, E10, E85) en France à partir de variables temporelles et géographiques. Il permet d'anticiper les évolutions de prix et de comparer les tarifs selon les régions.
+Ce modèle prédit le **prix du carburant à la pompe** (SP95, SP98, Diesel, E85, GPL) en France à partir de variables temporelles et géographiques. Il permet d'anticiper les évolutions de prix et de comparer les tarifs selon les régions.
+
+- **Repo modèle Hugging Face :** https://huggingface.co/a126OPS/carburant_price_predict
+- **Space Hugging Face :** https://huggingface.co/spaces/a126OPS/carburant_predict
 
 ## Utilisation
 
 ```python
 import joblib
-import numpy as np
 from huggingface_hub import hf_hub_download
 
-# Chargement du modèle
-model_path = hf_hub_download(repo_id="a126OPS/carburant_predict", filename="model.joblib")
-model = joblib.load(model_path)
+# Chargement des artefacts du modèle
+model_path = hf_hub_download(
+    repo_id="a126OPS/carburant_price_predict",
+    filename="modele_carburant.joblib",
+)
+model_data = joblib.load(model_path)
+pipeline = model_data["pipeline"]
 
-# Exemple de prédiction
-# [type_carburant, departement, mois, annee]
-features = np.array([[1, 71, 3, 2025]])  # SP95, Saône-et-Loire, mars 2025
-predicted_price = model.predict(features)
-print(f"Prix estimé : {predicted_price[0]:.3f} €/L")
+print(type(pipeline).__name__)
 ```
 
 ## Données d'entraînement
@@ -44,12 +46,46 @@ print(f"Prix estimé : {predicted_price[0]:.3f} €/L")
 - **Variables d'entrée :** type de carburant, département, période (mois/année)
 - **Variable cible :** prix en €/litre
 
-## Performances
+## API
 
-| Métrique | Valeur |
-|----------|--------|
-| RMSE | À compléter |
-| R² | À compléter |
+L'application Gradio déployée sur le Space Hugging Face expose aussi une **API JSON** pour l'intégrer facilement dans un portfolio ou un site vitrine.
+
+- **Space :** `https://huggingface.co/spaces/a126OPS/carburant_predict`
+- **Endpoint runtime :** `POST https://<ton-space>.hf.space/api/predict`
+- **Entrées :** `departement`, `carburant`, `horizon`
+- **Formats acceptés pour le département :** `"75"` ou `"75 — Paris"`
+
+Exemple de requête :
+
+```json
+{
+  "data": ["75", "Diesel", 7]
+}
+```
+
+Exemple JavaScript :
+
+```js
+const response = await fetch("https://<ton-space>.hf.space/api/predict", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    data: ["75", "Diesel", 7],
+  }),
+});
+
+const payload = await response.json();
+const result = payload.data[0];
+
+if (!result.ok) {
+  console.error(result.error);
+} else {
+  console.log(result.prediction.prix_predit_eur_l);
+  console.log(result.tendance.conseil);
+}
+```
 
 ## Limites
 
@@ -60,7 +96,8 @@ print(f"Prix estimé : {predicted_price[0]:.3f} €/L")
 ## Auteur
 
 Développé par [a126OPS](https://huggingface.co/a126OPS)  
-🔗 Démo interactive : [carburant_predict](https://huggingface.co/spaces/a126OPS/carburant_predict)
+🔗 Modèle : [carburant_price_predict](https://huggingface.co/a126OPS/carburant_price_predict)  
+🔗 Démo interactive et API : [carburant_predict](https://huggingface.co/spaces/a126OPS/carburant_predict)
 
 ## Licence
 

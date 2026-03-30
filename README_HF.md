@@ -11,6 +11,9 @@ pinned: false
 
 # PREDICTION PRIX CARBURANT
 
+- **Repo modèle Hugging Face** : https://huggingface.co/a126OPS/carburant_price_predict
+- **Space Hugging Face** : https://huggingface.co/spaces/a126OPS/carburant_predict
+
 Prédictions IA du prix du carburant en France pour les 14 prochains jours.
 
 ## Fonctionnement
@@ -41,4 +44,6 @@ Prédictions IA du prix du carburant en France pour les 14 prochains jours.
 
 ---
 
-**Source Code** : [GitHub](https://github.com/a126OPS/projet_public)
+**Repo modèle** : https://huggingface.co/a126OPS/carburant_price_predict  
+**Space** : https://huggingface.co/spaces/a126OPS/carburant_predict  
+**Code source** : [GitHub](https://github.com/a126OPS/carburant_predict)
