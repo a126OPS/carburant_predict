@@ -19,6 +19,7 @@ carburant/
 .idea/
 *.swp
 *.swo
+.gradio/
 
 # OS
 .DS_Store
