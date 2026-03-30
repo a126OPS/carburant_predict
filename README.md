@@ -1,35 +1,67 @@
 ---
-title: Carburant Predict
-emoji: ⛽
-colorFrom: blue
-colorTo: green
-sdk: gradio
-sdk_version: 6.9.0
-app_file: app.py
-pinned: false
+language:
+- fr
 license: mit
+tags:
+- tabular-regression
+- price-prediction
+- fuel
+- carburant
+- scikit-learn
+- joblib
+metrics:
+- rmse
+- r2
 ---
 
-# Carburant Predict
+# ⛽ Prédiction du Prix du Carburant
 
-Prediction du prix des carburants en France pour les 14 prochains jours.
+## Description
 
-## Fonctionnement
-
-- Modele de regression Ridge
-- Donnees par departement et type de carburant
-- Source: data.economie.gouv.fr
-- Intervalle de confiance base sur la MAE du modele
+Ce modèle prédit le **prix du carburant à la pompe** (SP95, SP98, Diesel, E10, E85) en France à partir de variables temporelles et géographiques. Il permet d'anticiper les évolutions de prix et de comparer les tarifs selon les régions.
 
 ## Utilisation
 
-1. Choisissez un departement.
-2. Choisissez un carburant.
-3. Choisissez un horizon de prediction entre 1 et 14 jours.
-4. Lancez la prediction pour obtenir la tendance et le conseil associe.
+```python
+import joblib
+import numpy as np
+from huggingface_hub import hf_hub_download
 
-## Notes
+# Chargement du modèle
+model_path = hf_hub_download(repo_id="a126OPS/carburant_predict", filename="model.joblib")
+model = joblib.load(model_path)
 
-- Les fichiers `modele_carburant.joblib` et `runtime_cache_2026.joblib` sont telecharges au demarrage si besoin.
-- Le Space utilise `app.py` comme point d'entree.
-- Les dependances runtime sont definies dans `requirements.txt`.
+# Exemple de prédiction
+# [type_carburant, departement, mois, annee]
+features = np.array([[1, 71, 3, 2025]])  # SP95, Saône-et-Loire, mars 2025
+predicted_price = model.predict(features)
+print(f"Prix estimé : {predicted_price[0]:.3f} €/L")
+```
+
+## Données d'entraînement
+
+- **Source :** Open data gouvernemental — prix des carburants en France (data.gouv.fr)
+- **Variables d'entrée :** type de carburant, département, période (mois/année)
+- **Variable cible :** prix en €/litre
+
+## Performances
+
+| Métrique | Valeur |
+|----------|--------|
+| RMSE | À compléter |
+| R² | À compléter |
+
+## Limites
+
+- Les chocs ponctuels (crises géopolitiques, taxes exceptionnelles) ne sont pas modélisés
+- La précision varie selon le type de carburant
+- Modèle entraîné sur données françaises uniquement
+
+## Auteur
+
+Développé par [a126OPS](https://huggingface.co/a126OPS)  
+🔗 Démo interactive : [carburant_predict](https://huggingface.co/spaces/a126OPS/carburant_predict)
+
+## Licence
+
+[MIT](https://opensource.org/licenses/MIT)
