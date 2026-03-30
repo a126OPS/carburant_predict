@@ -1,19 +1,3 @@
----
-language:
-- fr
-license: mit
-tags:
-- tabular-regression
-- price-prediction
-- fuel
-- carburant
-- scikit-learn
-- joblib
-metrics:
-- rmse
-- r2
----
-
 # ⛽ Prédiction du Prix du Carburant
 
 ## Description
