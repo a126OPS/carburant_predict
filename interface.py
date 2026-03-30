@@ -389,8 +389,7 @@ with gr.Blocks(
         fn=predire_interface,
         inputs=[dept_input, carb_input, horizon_input],
         outputs=output,
-        api_name=False,
-        show_api=False
+        api_name=False
     )
 
     api_btn.click(
